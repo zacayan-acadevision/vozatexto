@@ -34,12 +34,25 @@
         .listening {
             color: green;
         }
+        .message label {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            cursor: pointer;
+        }
+        .message input {
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
-    <button id="toggleBtn">Activar Voz 1</button>
+    <button id="toggleBtn">Activar Voz v3</button>
     <span id="status">Micrófono apagado</span>
     <div class="chat-container" id="chat"></div>
+    <button id="exportBtn">Exportar</button>
+    <textarea id="exportArea" rows="5" cols="40"></textarea>
+    <button id="speakBtn">Leer en Voz Alta</button>
+    <button id="resetBtn">Reiniciar</button>
 
     <script>
         let recognition;
@@ -48,12 +61,45 @@
         let statusIndicator = document.getElementById('status');
         let messageId = parseInt(localStorage.getItem('messageId')) || 0;
 
-        function addMessage(text, id) {
+        function saveToLocalStorage() {
+            let messages = document.querySelectorAll('.message');
+            let jsonData = [];
+            messages.forEach(msg => {
+                let id = parseInt(msg.getAttribute('data-id'));
+                let text = msg.querySelector('span').innerText;
+                let disabled = !msg.querySelector('input').checked;
+                jsonData.push({ id, text, disabled });
+            });
+            jsonData.sort((a, b) => a.id - b.id);
+            localStorage.setItem('savedMessages', JSON.stringify(jsonData));
+            localStorage.setItem('messageId', messageId);
+        }
+
+        function addMessage(text, id, enabled = true, save = true) {
             let messageElement = document.createElement('div');
             messageElement.classList.add('message');
             messageElement.setAttribute('data-id', id);
-            messageElement.innerText = text;
+            
+            let label = document.createElement('label');
+            let checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = enabled;
+            checkbox.classList.add('msg-checkbox');
+            
+            let textSpan = document.createElement('span');
+            textSpan.innerText = text;
+            
+            label.appendChild(checkbox);
+            label.appendChild(textSpan);
+            messageElement.appendChild(label);
+            
+            label.addEventListener('click', () => {
+                checkbox.checked = !checkbox.checked;
+                saveToLocalStorage();
+            });
+            
             chatContainer.prepend(messageElement);
+            if (save) saveToLocalStorage();
         }
 
         if ('webkitSpeechRecognition' in window) {
@@ -72,7 +118,7 @@
 
             recognition.onend = function() {
                 if (isListening) {
-                    recognition.start(); // Reiniciar la escucha automáticamente
+                    recognition.start();
                 }
             };
         } else {
