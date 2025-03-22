@@ -34,25 +34,12 @@
         .listening {
             color: green;
         }
-        .message label {
-            display: flex;
-            align-items: center;
-            width: 100%;
-            cursor: pointer;
-        }
-        .message input {
-            margin-right: 10px;
-        }
     </style>
 </head>
 <body>
-    <button id="toggleBtn">Activar Voz</button>
+    <button id="toggleBtn">Activar Voz 1</button>
     <span id="status">Micrófono apagado</span>
     <div class="chat-container" id="chat"></div>
-    <button id="exportBtn">Exportar</button>
-    <textarea id="exportArea" rows="5" cols="40"></textarea>
-    <button id="speakBtn">Leer en Voz Alta</button>
-    <button id="resetBtn">Reiniciar</button>
 
     <script>
         let recognition;
@@ -61,45 +48,12 @@
         let statusIndicator = document.getElementById('status');
         let messageId = parseInt(localStorage.getItem('messageId')) || 0;
 
-        function saveToLocalStorage() {
-            let messages = document.querySelectorAll('.message');
-            let jsonData = [];
-            messages.forEach(msg => {
-                let id = parseInt(msg.getAttribute('data-id'));
-                let text = msg.querySelector('span').innerText;
-                let disabled = !msg.querySelector('input').checked;
-                jsonData.push({ id, text, disabled });
-            });
-            jsonData.sort((a, b) => a.id - b.id); // Mantener el orden de los IDs
-            localStorage.setItem('savedMessages', JSON.stringify(jsonData));
-            localStorage.setItem('messageId', messageId);
-        }
-
-        function addMessage(text, id, enabled = true, save = true) {
+        function addMessage(text, id) {
             let messageElement = document.createElement('div');
             messageElement.classList.add('message');
             messageElement.setAttribute('data-id', id);
-            
-            let label = document.createElement('label');
-            let checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.checked = enabled;
-            checkbox.classList.add('msg-checkbox');
-            
-            let textSpan = document.createElement('span');
-            textSpan.innerText = text;
-            
-            label.appendChild(checkbox);
-            label.appendChild(textSpan);
-            messageElement.appendChild(label);
-            
-            label.addEventListener('click', () => {
-                checkbox.checked = !checkbox.checked;
-                saveToLocalStorage();
-            });
-            
+            messageElement.innerText = text;
             chatContainer.prepend(messageElement);
-            if (save) saveToLocalStorage();
         }
 
         if ('webkitSpeechRecognition' in window) {
@@ -109,8 +63,17 @@
             recognition.lang = 'es-ES';
 
             recognition.onresult = function(event) {
-                let transcript = event.results[event.resultIndex][0].transcript;
-                addMessage(transcript, messageId++);
+                let finalTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    finalTranscript += event.results[i][0].transcript + ' ';
+                }
+                addMessage(finalTranscript.trim(), messageId++);
+            };
+
+            recognition.onend = function() {
+                if (isListening) {
+                    recognition.start(); // Reiniciar la escucha automáticamente
+                }
             };
         } else {
             alert("Tu navegador no soporta el reconocimiento de voz.");
@@ -129,42 +92,6 @@
                 statusIndicator.classList.remove('listening');
             }
             isListening = !isListening;
-        });
-
-        document.getElementById('exportBtn').addEventListener('click', function() {
-            let messages = document.querySelectorAll('.message');
-            let textOutput = [];
-            let orderedMessages = Array.from(messages).map(msg => {
-                return {
-                    id: parseInt(msg.getAttribute('data-id')),
-                    text: msg.querySelector('span').innerText,
-                    enabled: msg.querySelector('input').checked
-                };
-            }).filter(msg => msg.enabled);
-            
-            orderedMessages.sort((a, b) => a.id - b.id);
-            
-            orderedMessages.forEach(msg => {
-                textOutput.push(msg.text);
-            });
-            
-            document.getElementById('exportArea').value = textOutput.join('\n');
-            chatContainer.innerHTML = ''; // Vaciar la zona visual
-        });
-
-        document.getElementById('speakBtn').addEventListener('click', function() {
-            let text = document.getElementById('exportArea').value;
-            if (text.trim() !== '') {
-                let speech = new SpeechSynthesisUtterance(text);
-                speech.lang = 'es-ES';
-                window.speechSynthesis.speak(speech);
-            }
-        });
-
-        document.getElementById('resetBtn').addEventListener('click', function() {
-            localStorage.removeItem('savedMessages');
-            chatContainer.innerHTML = '';
-            saveToLocalStorage();
         });
     </script>
 </body>
