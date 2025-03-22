@@ -2,6 +2,7 @@
 import { addMessage } from './messageHandler.js';
 import { initializeNetworkMonitor } from './networkMonitor.js';
 import { startRecording, stopRecording } from './audioRecorder.js'; // Importa el nuevo módulo
+import popup from './popup/popup.js';
 
 let recognition;
 let isListening = false;
@@ -19,12 +20,12 @@ export function initializeSpeechRecognition() {
     };
 
     recognition.onstart = () => {
-      console.log("Reconocimiento de voz iniciado.");
+      popup("Reconocimiento de voz iniciado.");
       startRecording(); // Inicia la grabación de audio
     };
 
     recognition.onend = () => {
-      console.log("Reconocimiento de voz detenido.");
+      popup("Reconocimiento de voz detenido.");
       stopRecording(); // Detiene la grabación de audio
       if (isListening) recognition.start();
     };
