@@ -46,7 +46,7 @@
     </style>
 </head>
 <body>
-    <button id="toggleBtn">Activar Voz v3</button>
+    <button id="toggleBtn">Activar Voz</button>
     <span id="status">Micrófono apagado</span>
     <div class="chat-container" id="chat"></div>
     <button id="exportBtn">Exportar</button>
@@ -70,7 +70,7 @@
                 let disabled = !msg.querySelector('input').checked;
                 jsonData.push({ id, text, disabled });
             });
-            jsonData.sort((a, b) => a.id - b.id);
+            jsonData.sort((a, b) => a.id - b.id); // Mantener el orden de los IDs
             localStorage.setItem('savedMessages', JSON.stringify(jsonData));
             localStorage.setItem('messageId', messageId);
         }
@@ -109,13 +109,9 @@
             recognition.lang = 'es-ES';
 
             recognition.onresult = function(event) {
-                let finalTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    finalTranscript += event.results[i][0].transcript + ' ';
-                }
-                addMessage(finalTranscript.trim(), messageId++);
+                let transcript = event.results[event.resultIndex][0].transcript;
+                addMessage(transcript, messageId++);
             };
-
             recognition.onend = function() {
                 if (isListening) {
                     recognition.start();
@@ -138,6 +134,42 @@
                 statusIndicator.classList.remove('listening');
             }
             isListening = !isListening;
+        });
+
+        document.getElementById('exportBtn').addEventListener('click', function() {
+            let messages = document.querySelectorAll('.message');
+            let textOutput = [];
+            let orderedMessages = Array.from(messages).map(msg => {
+                return {
+                    id: parseInt(msg.getAttribute('data-id')),
+                    text: msg.querySelector('span').innerText,
+                    enabled: msg.querySelector('input').checked
+                };
+            }).filter(msg => msg.enabled);
+            
+            orderedMessages.sort((a, b) => a.id - b.id);
+            
+            orderedMessages.forEach(msg => {
+                textOutput.push(msg.text);
+            });
+            
+            document.getElementById('exportArea').value = textOutput.join('\n');
+            chatContainer.innerHTML = ''; // Vaciar la zona visual
+        });
+
+        document.getElementById('speakBtn').addEventListener('click', function() {
+            let text = document.getElementById('exportArea').value;
+            if (text.trim() !== '') {
+                let speech = new SpeechSynthesisUtterance(text);
+                speech.lang = 'es-ES';
+                window.speechSynthesis.speak(speech);
+            }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            localStorage.removeItem('savedMessages');
+            chatContainer.innerHTML = '';
+            saveToLocalStorage();
         });
     </script>
 </body>
